@@ -1,131 +1,82 @@
-import React, { useState } from "react";
+// Home.jsx
+import React, { useEffect, useState } from "react";
+import ObjectionCard from "./ObjectionCard";
 
-export default function Home() {
-  const [imageFile, setImageFile] = useState(null);
-  const [description, setDescription] = useState("");
-  const [latitude, setLatitude] = useState("");
-  const [longitude, setLongitude] = useState("");
-  const [objectionType, setObjectionType] = useState("potholes");
-  const [loading, setLoading] = useState(false);
+const Home = () => {
+  const [objections, setObjections] = useState([]);
+  const [resolvedObjections, setResolvedObjections] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState("unresolved");
 
-  const handleUpload = async () => {
-    if (!imageFile || !description || !latitude || !longitude || !objectionType) {
-      alert("Please fill all fields and select an image.");
-      return;
-    }
+  useEffect(() => {
+    fetchObjections();
+  }, []);
 
-    setLoading(true);
-
+  const fetchObjections = async () => {
     try {
-      // Step 1: Upload image to Cloudinary
-      const folderPath = `civil/uploads/${objectionType}`;
-      const formData = new FormData();
-      formData.append("file", imageFile);
-      formData.append("upload_preset", "civil_service"); // case sensitive
-      formData.append("cloud_name","du3ucafou")
-
-      formData.append("folder", folderPath);
-
-      const cloudinaryRes = await fetch(
-        "https://api.cloudinary.com/v1_1/du3ucafou/image/upload",
-        {
-          method: "POST",
-          body: formData
-        }
-      );
-
-      const cloudinaryData = await cloudinaryRes.json();
-      const imageUrl = cloudinaryData.secure_url;
-      console.log(cloudinaryData);
-
-
-      // Step 2: Send metadata to backend
-      const payload = {
-        description,
-        latitude,
-        longitude,
-        image_url: imageUrl,
-        objection_type: objectionType
-      };
-
-      const backendRes = await fetch("http://localhost:8080/api/objections", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-
-      if (!backendRes.ok) throw new Error("Backend error");
-
-      alert("Objection submitted successfully!");
-      setImageFile(null);
-      setDescription("");
-      setLatitude("");
-      setLongitude("");
-      setObjectionType("potholes");
+      const [unresolvedRes, resolvedRes] = await Promise.all([
+        fetch("http://localhost:8080/api/objections"),
+        fetch("http://localhost:8080/api/objections/resolved"),
+      ]);
+      setObjections(await unresolvedRes.json());
+      setResolvedObjections(await resolvedRes.json());
+      setLoading(false);
     } catch (err) {
       console.error(err);
-      alert("Error uploading image or sending data.");
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
+  const handleResolved = (id) => {
+    const resolvedItem = objections.find((obj) => obj.id === id);
+    if (resolvedItem) setResolvedObjections([resolvedItem, ...resolvedObjections]);
+    setObjections(objections.filter((obj) => obj.id !== id));
+  };
+
+  if (loading) return <p className="text-center mt-4">Loading objections...</p>;
+
+  const displayObjections = tab === "unresolved" ? objections : resolvedObjections;
+  const isResolvedTab = tab === "resolved";
+
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-      <div className="bg-white shadow-lg rounded-lg p-6 w-full max-w-md">
-        <h1 className="text-2xl font-bold mb-6 text-center text-gray-800">
-          Submit an Objection
-        </h1>
+    <div className="container mx-auto p-4">
+      <h1 className="text-3xl font-bold mb-6 text-center text-gray-800">Objections</h1>
 
-        <input
-          type="text"
-          placeholder="Latitude"
-          value={latitude}
-          onChange={(e) => setLatitude(e.target.value)}
-          className="mb-4 w-full p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
-        />
-
-        <input
-          type="text"
-          placeholder="Longitude"
-          value={longitude}
-          onChange={(e) => setLongitude(e.target.value)}
-          className="mb-4 w-full p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
-        />
-
-        <textarea
-          placeholder="Description"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          className="mb-4 w-full p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
-          rows={3}
-        />
-
-        <select
-          value={objectionType}
-          onChange={(e) => setObjectionType(e.target.value)}
-          className="mb-4 w-full p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+      {/* Tabs */}
+      <div className="flex justify-center mb-8 space-x-4">
+        <button
+          onClick={() => setTab("unresolved")}
+          className={`px-6 py-2 rounded-lg font-medium text-sm transition-all duration-500
+            ${tab === "unresolved" ? "bg-blue-600 text-white shadow-lg scale-105" : "bg-gray-200 text-gray-700 hover:bg-blue-500 hover:text-white hover:scale-105"}
+            cursor-pointer`}
         >
-          <option value="potholes">Potholes</option>
-          <option value="streetlights">Streetlights</option>
-          <option value="signboards">Signboards</option>
-          <option value="drainage">Drainage</option>
-        </select>
-
-        <input
-          type="file"
-          onChange={(e) => setImageFile(e.target.files[0])}
-          className="mb-4 w-full text-gray-700"
-        />
+          Unresolved
+        </button>
 
         <button
-          onClick={handleUpload}
-          disabled={loading}
-          className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold p-3 rounded transition duration-200"
+          onClick={() => setTab("resolved")}
+          className={`px-6 py-2 rounded-lg font-medium text-sm transition-all duration-500
+            ${tab === "resolved" ? "bg-green-600 text-white shadow-lg scale-105" : "bg-gray-200 text-gray-700 hover:bg-green-500 hover:text-white hover:scale-105"}
+            cursor-pointer`}
         >
-          {loading ? "Uploading..." : "Submit Objection"}
+          Resolved
         </button>
       </div>
+
+      {displayObjections.length === 0 ? (
+        <p className="text-center text-gray-500">No {tab} objections found.</p>
+      ) : (
+        displayObjections.map((obj) => (
+          <ObjectionCard
+            key={obj.id}
+            objection={obj}
+            onResolved={handleResolved}
+            isResolvedTab={isResolvedTab}
+          />
+        ))
+      )}
     </div>
   );
-}
+};
+
+export default Home;
