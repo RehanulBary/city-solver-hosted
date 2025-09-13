@@ -22,7 +22,7 @@ const AuthObjectionCard = ({ objection, onResolved, isResolvedTab }) => {
   const handleResolved = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(`http://localhost:8080/api/objections/${objection.id}/resolve`, {
+      const res = await fetch(`https://city-solver-hosted.onrender.com/${objection.id}/resolve`, {
         method: "PATCH",
         headers: { Authorization: `Bearer ${token}` },
       });

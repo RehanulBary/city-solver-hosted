@@ -17,9 +17,9 @@ export default function AuthorityDashboard() {
     setLoading(true);
     try {
       const [unresRes, pendingRes, resRes] = await Promise.all([
-        fetch("http://localhost:8080/api/objections?status=pending", { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("http://localhost:8080/api/objections?status=pending_approval", { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("http://localhost:8080/api/objections/resolved", { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("https://city-solver-hosted.onrender.com/api/objections?status=pending", { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("https://city-solver-hosted.onrender.com/api/objections?status=pending_approval", { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("https://city-solver-hosted.onrender.com/api/objections/resolved", { headers: { Authorization: `Bearer ${token}` } }),
       ]);
 
       const unresData = await unresRes.json();

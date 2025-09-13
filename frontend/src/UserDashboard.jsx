@@ -18,10 +18,10 @@ export default function UserDashboard() {
     setLoading(true);
     try {
       const [pendingRes, resolvedRes] = await Promise.all([
-        fetch("http://localhost:8080/api/objections", {
+        fetch("https://city-solver-hosted.onrender.com/api/objections", {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        fetch("http://localhost:8080/api/objections/resolved", {
+        fetch("https://city-solver-hosted.onrender.com/api/objections/resolved", {
           headers: { Authorization: `Bearer ${token}` },
         }),
       ]);
@@ -47,7 +47,7 @@ export default function UserDashboard() {
   const handleApprove = async (id) => {
     try {
       const res = await fetch(
-        `http://localhost:8080/api/objections/${id}/approve`,
+        `https://city-solver-hosted.onrender.com/api/objections/${id}/approve`,
         {
           method: "PATCH",
           headers: { Authorization: `Bearer ${token}` },

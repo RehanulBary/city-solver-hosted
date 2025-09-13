@@ -85,7 +85,7 @@ function ObjectionForm({ latitude, longitude, onClose }) {
       };
       console.log("Payload to backend:", payload);
 
-      const res = await fetch("http://localhost:8080/api/objections", {
+      const res = await fetch("https://city-solver-hosted.onrender.com/api/objections", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
