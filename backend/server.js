@@ -11,50 +11,55 @@ const app = express();
 
 // PORT automatically assigned by Railway
 const PORT = process.env.PORT || 8080;
-const JWT_SECRET = process.env.JWT_SECRET || "defaultsecret";
+const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey";
 
-// CORS - allow all origins for now
+// Allow all origins for simplicity
 app.use(cors());
 app.use(express.json());
 
-// MySQL pool using Railway environment variables
+// MySQL pool using Railway env variables
 const db = mysql.createPool({
   host: process.env.MYSQLHOST,
   user: process.env.MYSQLUSER,
   password: process.env.MYSQLPASSWORD,
   database: process.env.MYSQLDATABASE,
-  port: process.env.MYSQLPORT
+  port: parseInt(process.env.MYSQLPORT) || 3306,
 });
 
 // Promisified query helper
 const q = (sql, params = []) =>
   new Promise((resolve, reject) => {
     db.query(sql, params, (err, results) => {
-      if (err) return reject(err);
+      if (err) {
+        console.error("SQL Error:", err);
+        return reject(err);
+      }
       resolve(results);
     });
   });
 
 // ------------------- AUTH -------------------
 
-// Signup route
+// Signup
 app.post("/api/auth/signup", async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
     if (!email || !password) return res.status(400).json({ error: "Email and password required" });
 
     const hash = await bcrypt.hash(password, 10);
-    const sql = "INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)";
-    const result = await q(sql, [name || null, email, hash, role || "user"]);
+    const result = await q(
+      "INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)",
+      [name || null, email, hash, role || "user"]
+    );
     res.status(201).json({ message: "User created", id: result.insertId });
   } catch (err) {
-    if (err?.code === "ER_DUP_ENTRY") return res.status(409).json({ error: "Email already in use" });
     console.error(err);
+    if (err?.code === "ER_DUP_ENTRY") return res.status(409).json({ error: "Email already in use" });
     res.status(500).json({ error: "Signup failed" });
   }
 });
 
-// Signin route
+// Signin
 app.post("/api/auth/signin", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -73,7 +78,7 @@ app.post("/api/auth/signin", async (req, res) => {
   }
 });
 
-// JWT authentication middleware
+// JWT middleware
 function authenticateJWT(req, res, next) {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith("Bearer ")) return res.status(401).json({ error: "Missing token" });
@@ -90,7 +95,7 @@ function authenticateJWT(req, res, next) {
 
 // ------------------- OBJECTIONS -------------------
 
-// Get objections (authority can filter by status)
+// Get objections
 app.get("/api/objections", authenticateJWT, async (req, res) => {
   try {
     const { status } = req.query;
@@ -120,11 +125,10 @@ app.get("/api/objections", authenticateJWT, async (req, res) => {
   }
 });
 
-// Authority marks objection pending_approval
+// Authority marks pending_approval
 app.patch("/api/objections/:id/resolve", authenticateJWT, async (req, res) => {
   try {
     if (req.user.role !== "authority") return res.status(403).json({ error: "Not authorized" });
-
     const id = req.params.id;
     const rows = await q("SELECT * FROM objections WHERE id = ?", [id]);
     if (!rows.length) return res.status(404).json({ error: "Objection not found" });
@@ -137,7 +141,7 @@ app.patch("/api/objections/:id/resolve", authenticateJWT, async (req, res) => {
   }
 });
 
-// Owner approves objection
+// Owner approves
 app.patch("/api/objections/:id/approve", authenticateJWT, async (req, res) => {
   try {
     const id = req.params.id;
@@ -162,7 +166,7 @@ app.patch("/api/objections/:id/approve", authenticateJWT, async (req, res) => {
   }
 });
 
-// Get resolved objections
+// Resolved objections
 app.get("/api/objections/resolved", authenticateJWT, async (req, res) => {
   try {
     let rows;
